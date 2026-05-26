@@ -1,0 +1,12 @@
+name: project_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pandas          # 處理 CSV 與數據運算
+  - matplotlib      # 產出統計圖表
+  - openpyxl        # 若學生需讀寫 Excel 檔案
+  - pip
+  - pip:
+  - numpy         # 支援邏輯運算模組
