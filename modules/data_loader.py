@@ -5,7 +5,7 @@ import pandas as pd
 def load_one_file(file_path, year):
     """
     讀取單一年度 CSV。
-    原始檔案不是標準乾淨表格，所以先用 header=None 讀入。
+    使用 header=None，因為原始資料不是乾淨表格。
     """
     try:
         df = pd.read_csv(file_path, encoding="utf-8-sig", header=None)
@@ -19,23 +19,32 @@ def load_one_file(file_path, year):
 def load_all_data(data_dir="data"):
     """
     讀取 110~114 年資料。
-    會優先從 data/ 資料夾讀取。
-    如果 data/ 找不到，會從專案根目錄讀取。
+    支援兩種檔名：
+    1. 110縣市人口按性別及五齡組.csv
+    2. 110縣市人口按性別及五齡組(1).csv
     """
     all_data = []
 
     for year in range(110, 115):
-        filename = f"{year}縣市人口按性別及五齡組.csv"
+        filename_1 = f"{year}縣市人口按性別及五齡組.csv"
+        filename_2 = f"{year}縣市人口按性別及五齡組(1).csv"
 
-        path_in_data = os.path.join(data_dir, filename)
-        path_in_root = filename
+        possible_paths = [
+            os.path.join(data_dir, filename_1),
+            os.path.join(data_dir, filename_2),
+            filename_1,
+            filename_2
+        ]
 
-        if os.path.exists(path_in_data):
-            file_path = path_in_data
-        elif os.path.exists(path_in_root):
-            file_path = path_in_root
-        else:
-            print(f"找不到檔案：{filename}")
+        file_path = None
+
+        for path in possible_paths:
+            if os.path.exists(path):
+                file_path = path
+                break
+
+        if file_path is None:
+            print(f"找不到 {year} 年資料檔案")
             continue
 
         print(f"讀取：{file_path}")
