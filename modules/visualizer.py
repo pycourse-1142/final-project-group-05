@@ -1,6 +1,4 @@
 import matplotlib.pyplot as plt
-import pandas as pd
-import os
 
 
 def setup_chinese_font():
@@ -59,7 +57,7 @@ def plot_aging_index_top10(aging_df, output_path):
 def plot_gender_pie(gender_df, output_path):
     """
     全台男女比例圓餅圖。
-    注意：不是各縣市，而是把所有縣市男性、女性加總。
+    將所有縣市男性、女性人口加總。
     """
     setup_chinese_font()
 
@@ -81,12 +79,19 @@ def plot_gender_pie(gender_df, output_path):
 def plot_population_trend(trend_df, output_path):
     """
     110~114 年人口變化趨勢折線圖。
-    這裡畫人口最多的前 8 個縣市，避免線太多導致圖很亂。
+
+    這裡使用「相對 110 年的人口變化率」。
+    優點：
+    1. 不會被人口總量壓扁
+    2. 比較容易看出人口增加或減少
+    3. 適合呈現趨勢變化
     """
     setup_chinese_font()
 
     latest_year = trend_df["year"].max()
+    start_year = trend_df["year"].min()
 
+    # 選 114 年人口最多的前 8 個縣市
     top_cities = (
         trend_df[trend_df["year"] == latest_year]
         .sort_values("total", ascending=False)
@@ -94,17 +99,36 @@ def plot_population_trend(trend_df, output_path):
         .tolist()
     )
 
-    plot_df = trend_df[trend_df["city"].isin(top_cities)]
+    plot_df = trend_df[trend_df["city"].isin(top_cities)].copy()
+
+    # 計算每個縣市 110 年人口，作為基準值
+    base_df = (
+        plot_df[plot_df["year"] == start_year][["city", "total"]]
+        .rename(columns={"total": "base_population"})
+    )
+
+    plot_df = plot_df.merge(base_df, on="city", how="left")
+
+    plot_df["change_rate"] = (
+        (plot_df["total"] - plot_df["base_population"]) /
+        plot_df["base_population"] * 100
+    )
 
     plt.figure(figsize=(10, 6))
 
     for city in top_cities:
         city_df = plot_df[plot_df["city"] == city].sort_values("year")
-        plt.plot(city_df["year"], city_df["total"], marker="o", label=city)
+        plt.plot(
+            city_df["year"],
+            city_df["change_rate"],
+            marker="o",
+            label=city
+        )
 
-    plt.title("110~114年主要縣市人口變化趨勢")
+    plt.axhline(0, linestyle="--", linewidth=1)
+    plt.title("110~114年主要縣市人口變化率趨勢")
     plt.xlabel("年度")
-    plt.ylabel("人口數")
+    plt.ylabel("相對110年人口變化率 (%)")
     plt.xticks(sorted(trend_df["year"].unique()))
     plt.legend()
     plt.tight_layout()

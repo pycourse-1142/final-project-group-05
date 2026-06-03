@@ -13,7 +13,8 @@ VALID_CITIES = [
 def clean_city_name(name):
     """
     統一縣市名稱格式。
-    原始資料可能是「新 北 市」、「臺 北 市」這種中間有空白的格式。
+    原始資料可能有空白，例如：
+    '新 北 市' -> '新北市'
     """
     if pd.isna(name):
         return np.nan
@@ -30,8 +31,10 @@ def clean_city_name(name):
 
 def to_number(value):
     """
-    將人口數轉成數字。
-    例如："1,234" -> 1234
+    將人口數轉成整數。
+    例如：
+    '1,234' -> 1234
+    空值或錯誤格式 -> 0
     """
     if pd.isna(value):
         return 0
@@ -55,18 +58,15 @@ def clean_population_data(raw_df):
     """
     將戶政司原始 CSV 整理成乾淨 DataFrame。
 
-    原始欄位位置：
-    0  : 縣市
-    1  : 性別
-    2  : 總人口
-    3  : 0歲
-    4  : 1~4歲小計
-    9  : 5~9歲
-    10 : 10~14歲
-    11 : 15~19歲
-    ...
-    20 : 60~64歲
-    21~28 : 65歲以上
+    清理項目：
+    1. 保留 計 / 男 / 女 資料列
+    2. 清理縣市名稱
+    3. 將人口數轉成整數
+    4. 只保留真正縣市
+    5. 建立三大年齡層：
+       - young_population：0~14 歲
+       - working_age_population：15~64 歲
+       - old_population：65 歲以上
     """
 
     records = []
@@ -82,24 +82,25 @@ def clean_population_data(raw_df):
 
         sex = str(sex).strip()
 
-        # 只保留「計、男、女」
+        # 只保留人口統計需要的三種性別分類
         if sex not in ["計", "男", "女"]:
             continue
 
-        # 原始資料中，縣市名稱只出現在「男」那一列
-        # 「計」和「女」通常是 NaN，所以要先保留，後面用 ffill 補
         records.append({
             "year": year,
             "city": city,
             "sex": sex,
 
+            # 總人口
             "total": to_number(row.get(2)),
 
+            # 0~14 歲
             "age_0": to_number(row.get(3)),
             "age_1_4": to_number(row.get(4)),
             "age_5_9": to_number(row.get(9)),
             "age_10_14": to_number(row.get(10)),
 
+            # 15~64 歲
             "age_15_19": to_number(row.get(11)),
             "age_20_24": to_number(row.get(12)),
             "age_25_29": to_number(row.get(13)),
@@ -111,6 +112,7 @@ def clean_population_data(raw_df):
             "age_55_59": to_number(row.get(19)),
             "age_60_64": to_number(row.get(20)),
 
+            # 65 歲以上
             "age_65_69": to_number(row.get(21)),
             "age_70_74": to_number(row.get(22)),
             "age_75_79": to_number(row.get(23)),
@@ -126,16 +128,25 @@ def clean_population_data(raw_df):
     if df.empty:
         raise ValueError("清理後沒有資料，請檢查 CSV 格式是否正確。")
 
-    # 補縣市名稱
-    df["city"] = df["city"].ffill()
+    # ==========================================================
+    # 重要修正：
+    # 只能在同一年內補縣市名稱，避免跨年度補錯。
+    #
+    # 錯誤寫法：
+    # df["city"] = df["city"].ffill()
+    #
+    # 正確寫法：
+    # df["city"] = df.groupby("year")["city"].ffill()
+    # ==========================================================
+    df["city"] = df.groupby("year")["city"].ffill()
 
-    # 移除總計與非縣市資料
+    # 只保留真正縣市，排除全國總計、臺灣省、福建省等彙總列
     df = df[df["city"].isin(VALID_CITIES)]
 
-    # 過濾人口數異常資料
+    # 過濾人口數為 0 或異常值的資料
     df = df[df["total"] > 0]
 
-    # 建立三大年齡層
+    # 建立 0~14 歲人口
     df["young_population"] = (
         df["age_0"] +
         df["age_1_4"] +
@@ -143,6 +154,7 @@ def clean_population_data(raw_df):
         df["age_10_14"]
     )
 
+    # 建立 15~64 歲人口
     df["working_age_population"] = (
         df["age_15_19"] +
         df["age_20_24"] +
@@ -156,6 +168,7 @@ def clean_population_data(raw_df):
         df["age_60_64"]
     )
 
+    # 建立 65 歲以上人口
     df["old_population"] = (
         df["age_65_69"] +
         df["age_70_74"] +
