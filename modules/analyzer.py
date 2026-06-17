@@ -98,3 +98,18 @@ def calculate_population_change(trend_df, start_year=110, end_year=114):
     result["change_rate"] = result["change_rate"].round(2)
 
     return result.sort_values("change_amount")
+
+
+def calculate_elderly_gender_ratio(df, year):
+    """
+    計算65歲以上人口男女比例
+    """
+    target = df[df["year"] == year].copy()
+
+    male = target[target["sex"] == "男"]["old_population"].sum()
+    female = target[target["sex"] == "女"]["old_population"].sum()
+
+    return {
+        "male": male,
+        "female": female
+    }

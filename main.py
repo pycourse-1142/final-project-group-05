@@ -8,12 +8,14 @@ from modules.analyzer import (
     calculate_gender_ratio,
     calculate_population_trend,
     calculate_population_change,
+    calculate_elderly_gender_ratio
 )
 from modules.visualizer import (
     plot_population_bar,
     plot_aging_index_top10,
     plot_gender_pie,
     plot_population_trend,
+    plot_elderly_gender_pie
 )
 
 
@@ -31,6 +33,7 @@ def main():
 
     print("計算 114 年各縣市人口總數...")
     population_114 = calculate_city_population(df, year=114)
+    
 
     print("\n114 年人口最多前 10 名：")
     print(population_114.head(10).to_string(index=False))
@@ -40,6 +43,10 @@ def main():
 
     print("計算 114 年男女比例...")
     gender_ratio_114 = calculate_gender_ratio(df, year=114)
+    elderly_gender_114 = calculate_elderly_gender_ratio(
+    df,
+    year=114
+)
 
     print("計算 110~114 年人口趨勢...")
     trend_df = calculate_population_trend(df)
@@ -94,9 +101,11 @@ def main():
         os.path.join(results_dir, "aging_index_top10.png")
     )
 
-    plot_gender_pie(
-        gender_ratio_114,
-        os.path.join(results_dir, "gender_pie.png")
+    plot_elderly_gender_pie(
+elderly_gender_114,
+    os.path.join(
+        results_dir,
+        "elderly_gender_pie.png")
     )
 
     plot_population_trend(

@@ -15,21 +15,26 @@ def setup_chinese_font():
     plt.rcParams["axes.unicode_minus"] = False
 
 
+from matplotlib.ticker import FuncFormatter
+
 def plot_population_bar(population_df, output_path):
-    """
-    各縣市人口總數長條圖
-    """
     setup_chinese_font()
 
     df = population_df.sort_values("total", ascending=True)
 
     plt.figure(figsize=(10, 8))
     plt.barh(df["city"], df["total"])
-    plt.title("114年各縣市人口總數")
-    plt.xlabel("人口數")
-    plt.ylabel("縣市")
-    plt.tight_layout()
 
+    plt.title("114年各縣市人口總數")
+    plt.xlabel("人口數（萬人）")
+    plt.ylabel("縣市")
+
+    # 轉成萬人
+    plt.gca().xaxis.set_major_formatter(
+        FuncFormatter(lambda x, pos: f"{x/10000:.0f}")
+    )
+
+    plt.tight_layout()
     plt.savefig(output_path, dpi=300)
     plt.close()
 
@@ -131,6 +136,37 @@ def plot_population_trend(trend_df, output_path):
     plt.ylabel("相對110年人口變化率 (%)")
     plt.xticks(sorted(trend_df["year"].unique()))
     plt.legend()
+    plt.tight_layout()
+
+    plt.savefig(output_path, dpi=300)
+    plt.close()
+
+    
+
+def plot_elderly_gender_pie(elderly_data, output_path):
+    """
+    114年65歲以上人口男女比例
+    """
+    setup_chinese_font()
+
+    labels = ["男性", "女性"]
+
+    values = [
+        elderly_data["male"],
+        elderly_data["female"]
+    ]
+
+    plt.figure(figsize=(7, 7))
+
+    plt.pie(
+        values,
+        labels=labels,
+        autopct="%1.2f%%",
+        startangle=90
+    )
+
+    plt.title("114年65歲以上人口全台男女比例")
+
     plt.tight_layout()
 
     plt.savefig(output_path, dpi=300)
